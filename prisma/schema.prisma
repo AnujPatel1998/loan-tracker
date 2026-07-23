@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  employee
+  customer
+}
+
+model User {
+  id            String    @id @default(uuid())
+  username      String    @unique
+  passwordHash  String
+  role          Role
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  staffProfile  StaffProfile?
+  customer      Customer?
+  statusChanges StatusHistory[] @relation("ChangedBy")
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model StaffProfile {
+  id           String   @id @default(uuid())
+  userId       String?  @unique
+  user         User?    @relation(fields: [userId], references: [id])
+  fullName     String
+  designation  String?
+  phoneNumber  String?
+  email        String?
+  createdAt    DateTime @default(now())
+
+  executiveFor Customer[] @relation("Executive")
+  hodFor       Customer[] @relation("Hod")
+
+  @@map("staff_profiles")
+}
+
+model ApplicationStatus {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  sortOrder Int
+  isActive  Boolean  @default(true)
+
+  customers Customer[]
+  history   StatusHistory[]
+
+  @@map("application_statuses")
+}
+
+model Customer {
+  id                       String    @id @default(uuid())
+  userId                   String    @unique
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName                 String
+  phoneNumber              String
+  firmName                 String?
+  loanAmount               Decimal?  @db.Decimal(14,2)
+  bankName                 String?
+  caseHandlingExecutiveId  String?
+  caseHandlingExecutive    StaffProfile? @relation("Executive", fields: [caseHandlingExecutiveId], references: [id])
+  hodId                    String?
+  hod                      StaffProfile? @relation("Hod", fields: [hodId], references: [id])
+  currentStatusId          Int       @default(1)
+  currentStatus            ApplicationStatus @relation(fields: [currentStatusId], references: [id])
+  customerDeadline         DateTime? @db.Date
+  internalDeadline         DateTime? @db.Date
+  adminRemarks             String?
+  customerRemarks          String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  pendingDocuments PendingDocument[]
+  statusHistory    StatusHistory[]
+
+  @@map("customers")
+}
+
+model PendingDocument {
+  id            String    @id @default(uuid())
+  customerId    String
+  customer      Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  documentName  String
+  status        String    @default("pending")
+  requestedAt   DateTime  @default(now())
+  receivedAt    DateTime?
+
+  @@map("pending_documents")
+}
+
+model StatusHistory {
+  id          String   @id @default(uuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  statusId    Int
+  status      ApplicationStatus @relation(fields: [statusId], references: [id])
+  changedById String?
+  changedBy   User?    @relation("ChangedBy", fields: [changedById], references: [id])
+  note        String?
+  changedAt   DateTime @default(now())
+
+  @@map("status_history")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_log")
+}
