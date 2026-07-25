@@ -20,6 +20,11 @@ export class CustomersController {
     return this.customersService.createCustomer(dto);
   }
 
+  @Get('credentials')
+  async getAllCredentials() {
+    return this.customersService.getAllCredentials();
+  }
+
   @Get()
   async findAll(
     @Query('search') search?: string,

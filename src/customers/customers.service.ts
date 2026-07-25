@@ -243,6 +243,22 @@ export class CustomersService {
     };
   }
 
+  async getAllCredentials() {
+    const customers = await this.prisma.customer.findMany({
+      include: { user: true },
+      orderBy: { fullName: 'asc' },
+    });
+
+    return customers.map((customer) => ({
+      id: customer.id,
+      fullName: customer.fullName,
+      firmName: customer.firmName,
+      username: customer.user.username,
+      password: customer.user.passwordEncrypted ? decryptPassword(customer.user.passwordEncrypted) : null,
+      isActive: customer.user.isActive,
+    }));
+  }
+
   async resetPassword(id: string) {
     const customer = await this.prisma.customer.findUnique({
       where: { id },
