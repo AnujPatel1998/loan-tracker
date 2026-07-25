@@ -7,6 +7,7 @@ import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { UpdateRemarksDto } from './dto/update-remarks.dto';
 import { AddDocumentDto } from './dto/add-document.dto';
+import { encryptPassword, decryptPassword } from '../common/utils/credentials-encryption.util';
 
 @Injectable()
 export class CustomersService {
@@ -23,10 +24,11 @@ export class CustomersService {
 
     const plainPassword = generatePassword();
     const passwordHash = await bcrypt.hash(plainPassword, 10);
+    const passwordEncrypted = encryptPassword(plainPassword);
 
     const result = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
-        data: { username, passwordHash, role: 'customer' },
+        data: { username, passwordHash, passwordEncrypted, role: 'customer' },
       });
 
       const customer = await tx.customer.create({
@@ -34,11 +36,12 @@ export class CustomersService {
           userId: user.id,
           fullName: dto.fullName,
           phoneNumber: dto.phoneNumber,
+          dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
           firmName: dto.firmName,
           loanAmount: dto.loanAmount,
           bankName: dto.bankName,
-          caseHandlingExecutiveId: dto.caseHandlingExecutiveId,
-          hodId: dto.hodId,
+          caseHandlingExecutive: dto.caseHandlingExecutive,
+          hod: dto.hod,
           customerDeadline: dto.customerDeadline ? new Date(dto.customerDeadline) : undefined,
           internalDeadline: dto.internalDeadline ? new Date(dto.internalDeadline) : undefined,
           currentStatusId: 1,
@@ -78,8 +81,6 @@ export class CustomersService {
         orderBy: { createdAt: 'desc' },
         include: {
           currentStatus: true,
-          caseHandlingExecutive: true,
-          hod: true,
         },
       }),
       this.prisma.customer.count({ where }),
@@ -96,8 +97,6 @@ export class CustomersService {
       where: { id },
       include: {
         currentStatus: true,
-        caseHandlingExecutive: true,
-        hod: true,
         pendingDocuments: true,
         user: { select: { username: true, isActive: true, lastLoginAt: true } },
       },
@@ -119,18 +118,19 @@ export class CustomersService {
     return this.prisma.customer.update({
       where: { id },
       data: {
+        fullName: dto.fullName,
+        phoneNumber: dto.phoneNumber,
+        dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
         firmName: dto.firmName,
         loanAmount: dto.loanAmount,
         bankName: dto.bankName,
-        caseHandlingExecutiveId: dto.caseHandlingExecutiveId,
-        hodId: dto.hodId,
+        caseHandlingExecutive: dto.caseHandlingExecutive,
+        hod: dto.hod,
         customerDeadline: dto.customerDeadline ? new Date(dto.customerDeadline) : undefined,
         internalDeadline: dto.internalDeadline ? new Date(dto.internalDeadline) : undefined,
       },
       include: {
         currentStatus: true,
-        caseHandlingExecutive: true,
-        hod: true,
       },
     });
   }
@@ -201,5 +201,71 @@ export class CustomersService {
       where: { id: docId },
       data: { status: 'received', receivedAt: new Date() },
     });
+  }
+
+  async markDocumentUnreceived(customerId: string, docId: string) {
+    const doc = await this.prisma.pendingDocument.findUnique({ where: { id: docId } });
+    if (!doc || doc.customerId !== customerId) {
+      throw new NotFoundException('Document not found for this customer');
+    }
+
+    return this.prisma.pendingDocument.update({
+      where: { id: docId },
+      data: { status: 'pending', receivedAt: null },
+    });
+  }
+
+  async deleteDocument(customerId: string, docId: string) {
+    const doc = await this.prisma.pendingDocument.findUnique({ where: { id: docId } });
+    if (!doc || doc.customerId !== customerId) {
+      throw new NotFoundException('Document not found for this customer');
+    }
+
+    await this.prisma.pendingDocument.delete({ where: { id: docId } });
+    return { success: true };
+  }
+
+  async getCredentials(id: string) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id },
+      include: { user: true },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    return {
+      fullName: customer.fullName,
+      username: customer.user.username,
+      password: customer.user.passwordEncrypted ? decryptPassword(customer.user.passwordEncrypted) : null,
+      isActive: customer.user.isActive,
+    };
+  }
+
+  async resetPassword(id: string) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id },
+      include: { user: true },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    const plainPassword = generatePassword();
+    const passwordHash = await bcrypt.hash(plainPassword, 10);
+    const passwordEncrypted = encryptPassword(plainPassword);
+
+    await this.prisma.user.update({
+      where: { id: customer.userId },
+      data: { passwordHash, passwordEncrypted },
+    });
+
+    return {
+      fullName: customer.fullName,
+      username: customer.user.username,
+      password: plainPassword,
+    };
   }
 }

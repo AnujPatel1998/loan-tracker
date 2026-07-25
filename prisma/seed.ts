@@ -7,13 +7,9 @@ async function main() {
   const statusNames = [
     'Application Received',
     'Documents Pending',
-    'Under Review',
-    'Bank Query Raised',
-    'Sanction in Process',
-    'Sanction Approved',
-    'Disbursement Pending',
-    'Loan Disbursed',
-    'Case Closed',
+    'Loan Processing',
+    'Sanctioned',
+    'Disbursed',
   ];
 
   for (let i = 0; i < statusNames.length; i++) {

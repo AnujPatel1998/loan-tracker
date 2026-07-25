@@ -11,8 +11,6 @@ export class CustomerService {
       where: { userId },
       include: {
         currentStatus: true,
-        caseHandlingExecutive: true,
-        hod: true,
         pendingDocuments: {
           orderBy: { requestedAt: 'desc' },
         },
@@ -26,11 +24,12 @@ export class CustomerService {
     return {
       fullName: customer.fullName,
       phoneNumber: customer.phoneNumber,
+      dateOfBirth: customer.dateOfBirth,
       firmName: customer.firmName,
       loanAmount: customer.loanAmount,
       bankName: customer.bankName,
-      caseHandlingExecutive: customer.caseHandlingExecutive?.fullName ?? null,
-      hod: customer.hod?.fullName ?? null,
+      caseHandlingExecutive: customer.caseHandlingExecutive,
+      hod: customer.hod,
       currentStatus: customer.currentStatus.name,
       pendingDocuments: customer.pendingDocuments.map((doc) => ({
         documentName: doc.documentName,

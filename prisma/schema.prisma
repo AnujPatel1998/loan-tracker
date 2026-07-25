@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -14,19 +15,20 @@ enum Role {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  username      String    @unique
-  passwordHash  String
-  role          Role
-  isActive      Boolean   @default(true)
-  lastLoginAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  username          String    @unique
+  passwordHash      String
+  passwordEncrypted String?
+  role              Role
+  isActive          Boolean   @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  staffProfile  StaffProfile?
-  customer      Customer?
-  statusChanges StatusHistory[] @relation("ChangedBy")
-  auditLogs     AuditLog[]
+  staffProfile      StaffProfile?
+  customer          Customer?
+  statusChanges     StatusHistory[] @relation("ChangedBy")
+  auditLogs         AuditLog[]
 
   @@map("users")
 }
@@ -40,9 +42,6 @@ model StaffProfile {
   phoneNumber  String?
   email        String?
   createdAt    DateTime @default(now())
-
-  executiveFor Customer[] @relation("Executive")
-  hodFor       Customer[] @relation("Hod")
 
   @@map("staff_profiles")
 }
@@ -65,13 +64,12 @@ model Customer {
   user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName                 String
   phoneNumber              String
+  dateOfBirth              DateTime? @db.Date
   firmName                 String?
   loanAmount               Decimal?  @db.Decimal(14,2)
   bankName                 String?
-  caseHandlingExecutiveId  String?
-  caseHandlingExecutive    StaffProfile? @relation("Executive", fields: [caseHandlingExecutiveId], references: [id])
-  hodId                    String?
-  hod                      StaffProfile? @relation("Hod", fields: [hodId], references: [id])
+  caseHandlingExecutive    String?
+  hod                      String?
   currentStatusId          Int       @default(1)
   currentStatus            ApplicationStatus @relation(fields: [currentStatusId], references: [id])
   customerDeadline         DateTime? @db.Date

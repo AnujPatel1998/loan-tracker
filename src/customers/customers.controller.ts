@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, Patch, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Patch, Delete, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -63,5 +63,25 @@ export class CustomersController {
   @Patch(':id/documents/:docId')
   async markDocumentReceived(@Param('id') id: string, @Param('docId') docId: string) {
     return this.customersService.markDocumentReceived(id, docId);
+  }
+
+  @Patch(':id/documents/:docId/unreceive')
+  async markDocumentUnreceived(@Param('id') id: string, @Param('docId') docId: string) {
+    return this.customersService.markDocumentUnreceived(id, docId);
+  }
+
+  @Delete(':id/documents/:docId')
+  async deleteDocument(@Param('id') id: string, @Param('docId') docId: string) {
+    return this.customersService.deleteDocument(id, docId);
+  }
+
+  @Get(':id/credentials')
+  async getCredentials(@Param('id') id: string) {
+    return this.customersService.getCredentials(id);
+  }
+
+  @Post(':id/reset-password')
+  async resetPassword(@Param('id') id: string) {
+    return this.customersService.resetPassword(id);
   }
 }

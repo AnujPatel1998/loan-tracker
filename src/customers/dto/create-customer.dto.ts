@@ -10,6 +10,10 @@ export class CreateCustomerDto {
   phoneNumber!: string;
 
   @IsOptional()
+  @IsDateString()
+  dateOfBirth?: string;
+
+  @IsOptional()
   @IsString()
   firmName?: string;
 
@@ -22,12 +26,12 @@ export class CreateCustomerDto {
   bankName?: string;
 
   @IsOptional()
-  @IsUUID()
-  caseHandlingExecutiveId?: string;
+  @IsString()
+  caseHandlingExecutive?: string;
 
   @IsOptional()
-  @IsUUID()
-  hodId?: string;
+  @IsString()
+  hod?: string;
 
   @IsOptional()
   @IsDateString()
